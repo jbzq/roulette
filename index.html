@@ -1,132 +1,195 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>roulette</title>
-  <link rel="stylesheet" href="style.css">
-   <meta http-equiv="Content-Security-Policy" 
-        content="default-src 'self'; 
-                 script-src 'self' 'unsafe-inline' https://jbzq.github.io;
-                 style-src 'self' 'unsafe-inline'">
+  <title>Cubo 3D Definitivo</title>
+  <style>
+    body {
+      background: #000;
+      color: #0f0;
+      font-family: monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      overflow: hidden;
+    }
+    #terminal {
+      font-size: 18px;
+      line-height: 1;
+      letter-spacing: 1px;
+      white-space: pre;
+      transform: scale(1.5);
+    }
+    button {
+      margin-top: 30px;
+      background: #000;
+      color: #0f0;
+      border: 1px solid #0f0;
+      padding: 10px 20px;
+      font-family: monospace;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
   <div id="terminal"></div>
-  <button id="hackBtn">INICIAR SCAN</button>
+  <button id="hackBtn">INICIAR SCAN 3D</button>
 
-<script>
-const terminal = document.getElementById('terminal');
-const hackBtn = document.getElementById('hackBtn');
-
-let cube = [];
-const size = 5; // Tamanho do cubo
-const randomNum = () => Math.floor(Math.random() * 10); // Números aleatórios (0-9)
-
-function createCube() {
-  cube = [];
-  // Vértices (8 pontos)
-  for (let i = 0; i < 8; i++) {
-    cube.push({ type: 'vertex', x: randomNum(), y: randomNum(), z: randomNum(), char: randomNum() });
-  }
-
-  const edges = [
-    [0, 1], [1, 2], [2, 3], [3, 0], // Face frontal
-    [4, 5], [5, 6], [6, 7], [7, 4], // Face traseira
-    [0, 4], [1, 5], [2, 6], [3, 7]  // Conexões
-  ];
-
-  edges.forEach(edge => {
-    cube.push({ 
-      type: 'edge', 
-      from: edge[0], 
-      to: edge[1], 
-      chars: Array(size).fill().map(() => randomNum())
-    });
-  });
-
-  const faces = [
-    [0, 1, 2, 3], [4, 5, 6, 7], [0, 1, 5, 4],
-    [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7]
-  ];
-
-  faces.forEach(face => {
-    cube.push({
-      type: 'face',
-      vertices: face,
-      chars: Array(size * size).fill().map(() => randomNum())
-    });
-  });
-}
-
-function renderCube() {
-  let output = '';
-  const grid = Array(size * 2).fill().map(() => Array(size * 2).fill(' '));
-  
-  // Projeção 3D → 2D
-  cube.forEach(item => {
-    if (item.type === 'vertex') {
-      const x = Math.floor(item.x / 10 * size) + size;
-      const y = Math.floor(item.y / 10 * size) + size;
-      if (x >= 0 && x < size * 2 && y >= 0 && y < size * 2) {
-        grid[y][x] = item.char;
-      }
-    } else if (item.type === 'edge') {
-      const from = cube[item.from];
-      const to = cube[item.to];
-      if (item.chars && from && to) { // Verificação de segurança
-        item.chars.forEach((char, i) => {
-          const t = i / (item.chars.length - 1);
-          const x = Math.floor((from.x * (1 - t) + to.x * t) / 10 * size) + size;
-          const y = Math.floor((from.y * (1 - t) + to.y * t) / 10 * size) + size;
-          if (x >= 0 && x < size * 2 && y >= 0 && y < size * 2) {
-            grid[y][x] = char;
-          }
-        });
-      }
-    }
-  });
-
-  // Converte grid para string
-  grid.forEach(row => {
-    output += row.join('') + '\n';
-  });
-  terminal.textContent = output;
-}
-
-// Rotação do cubo
-function rotateCube() {
-  cube.forEach(item => {
-    if (item.type === 'vertex') {
-      // Rotação simples nos eixos X e Y
-      const tempY = item.y;
-      item.y = item.y * Math.cos(0.05) - item.z * Math.sin(0.05);
-      item.z = tempY * Math.sin(0.05) + item.z * Math.cos(0.05);
+  <script>
+    const terminal = document.getElementById('terminal');
+    const hackBtn = document.getElementById('hackBtn');
+    
+    // Configurações avançadas
+    const CUBE_SIZE = 5;
+    const EDGE_CHARS = ['─', '│', '┌', '┐', '└', '┘', '├', '┤', '┬', '┴', '┼'];
+    const CORNER_CHARS = ['╭', '╮', '╯', '╰'];
+    const FILL_CHARS = ['░', '▒', '▓', '█', '0', '1'];
+    const FPS = 20;
+    
+    // Pontos 3D do cubo (tamanho maior)
+    let vertices = [
+      [-2,-2,-2], [2,-2,-2], [2,2,-2], [-2,2,-2], // Face traseira
+      [-2,-2,2], [2,-2,2], [2,2,2], [-2,2,2]      // Face frontal
+    ];
+    
+    // Arestas com caracteres específicos
+    const edges = [
+      { points: [0,1], char: '─' },  // base traseira
+      { points: [1,2], char: '│' },  // lado direito traseiro
+      { points: [2,3], char: '─' },  // topo traseiro
+      { points: [3,0], char: '│' },  // lado esquerdo traseiro
       
-      const tempX = item.x;
-      item.x = item.x * Math.cos(0.03) - item.z * Math.sin(0.03);
-      item.z = tempX * Math.sin(0.03) + item.z * Math.cos(0.03);
+      { points: [4,5], char: '─' },  // base frontal
+      { points: [5,6], char: '│' },  // lado direito frontal
+      { points: [6,7], char: '─' },  // topo frontal
+      { points: [7,4], char: '│' },  // lado esquerdo frontal
+      
+      { points: [0,4], char: '╲' },  // arestas diagonais
+      { points: [1,5], char: '╲' },
+      { points: [2,6], char: '╲' },
+      { points: [3,7], char: '╲' }
+    ];
+    
+    // Função para projeção 3D com perspectiva
+    function project(point3D) {
+      const [x, y, z] = point3D;
+      const scale = 150 / (z + 6); // Perspectiva mais forte
+      return [
+        Math.floor(x * scale) + 40,
+        Math.floor(y * scale) + 20
+      ];
     }
-  });
-}
-
-// Animação
-function animate() {
-  rotateCube();
-  renderCube();
-  requestAnimationFrame(animate);
-}
-
-// Botão "Hack"
-hackBtn.addEventListener('click', () => {
-  terminal.textContent = 'SCANEANDO CUBO...\n';
-  setTimeout(() => {
-    terminal.textContent += 'VULNERABILIDADE ENCONTRADA: 0x' + 
-      Array(8).fill().map(() => randomNum().toString(16)).join('') + '\n';
-    createCube(); // Recria o cubo
-  }, 1000);
-});
-
-// Inicia
-createCube();
-animate();
-</script>
+    
+    // Desenha uma linha entre dois pontos
+    function drawLine(grid, [x1, y1], [x2, y2], char) {
+      const dx = Math.abs(x2 - x1);
+      const dy = Math.abs(y2 - y1);
+      const sx = (x1 < x2) ? 1 : -1;
+      const sy = (y1 < y2) ? 1 : -1;
+      let err = dx - dy;
+      
+      while(true) {
+        if (x1 >= 0 && x1 < 80 && y1 >= 0 && y1 < 40) {
+          // Preserva cantos existentes
+          if (!grid[y1][x1].match(/[╭╮╯╰┌┐└┘]/)) {
+            grid[y1][x1] = char;
+          }
+        }
+        
+        if (x1 === x2 && y1 === y2) break;
+        const e2 = 2*err;
+        if (e2 > -dy) { err -= dy; x1 += sx; }
+        if (e2 < dx) { err += dx; y1 += sy; }
+      }
+    }
+    
+    // Renderiza o cubo
+    function render() {
+      let output = '';
+      const grid = Array(40).fill().map(() => Array(80).fill(' '));
+      
+      // Desenha arestas
+      edges.forEach(edge => {
+        const [i, j] = edge.points;
+        const start = project(vertices[i]);
+        const end = project(vertices[j]);
+        drawLine(grid, start, end, edge.char);
+      });
+      
+      // Adiciona cantos
+      vertices.forEach((v, i) => {
+        const [x, y] = project(v);
+        if (x >= 0 && x < 80 && y >= 0 && y < 40) {
+          grid[y][x] = CORNER_CHARS[i % CORNER_CHARS.length];
+        }
+      });
+      
+      // Preenchimento com caracteres aleatórios
+      for (let y = 0; y < 40; y++) {
+        for (let x = 0; x < 80; x++) {
+          if (grid[y][x] === ' ' && Math.random() > 0.7) {
+            grid[y][x] = FILL_CHARS[Math.floor(Math.random() * FILL_CHARS.length)];
+          }
+        }
+      }
+      
+      // Converte grid para string
+      grid.forEach(row => {
+        output += row.join('') + '\n';
+      });
+      
+      terminal.textContent = output;
+    }
+    
+    // Rotaciona o cubo em 3 eixos
+    function rotate() {
+      const angleX = 0.01;
+      const angleY = 0.02;
+      const angleZ = 0.005;
+      
+      vertices = vertices.map(([x, y, z]) => {
+        // Rotação no eixo Y
+        let newX = x * Math.cos(angleY) - z * Math.sin(angleY);
+        let newZ = x * Math.sin(angleY) + z * Math.cos(angleY);
+        
+        // Rotação no eixo X
+        const newY = y * Math.cos(angleX) - newZ * Math.sin(angleX);
+        newZ = y * Math.sin(angleX) + newZ * Math.cos(angleX);
+        
+        // Rotação no eixo Z
+        const finalX = newX * Math.cos(angleZ) - newY * Math.sin(angleZ);
+        const finalY = newX * Math.sin(angleZ) + newY * Math.cos(angleZ);
+        
+        return [finalX, finalY, newZ];
+      });
+    }
+    
+    // Animação suave
+    function animate() {
+      rotate();
+      render();
+      setTimeout(() => {
+        requestAnimationFrame(animate);
+      }, 1000 / FPS);
+    }
+    
+    // Botão de scan
+    hackBtn.addEventListener('click', () => {
+      const originalContent = terminal.textContent;
+      terminal.textContent = 'SCANEANDO CUBO 3D...\n';
+      
+      setTimeout(() => {
+        terminal.textContent = originalContent + '\nSCAN COMPLETO!\n';
+        setTimeout(() => {
+          terminal.textContent = originalContent;
+        }, 1500);
+      }, 1000);
+    });
+    
+    // Inicia animação
+    animate();
+  </script>
 </body>
 </html>
