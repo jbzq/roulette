@@ -10,12 +10,16 @@ body {
   margin: 0;
   overflow: hidden;
 }
-#terminal, #cubo {
+#terminal {
   display: block;
-  width: 100%;
-  height: 200px;
+  width: 300px;
+  height: 300px;
+  margin: 20px auto;
+  padding: 10px;
   background: #111;
   border: 1px solid #0f0;
+  white-space: pre;
+  font-size: 24px;
 }
 button {
   margin-top: 20px;

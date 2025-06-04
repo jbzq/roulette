@@ -8,7 +8,7 @@ const radomNum = () => Math.floor(Math.random() * 10); // Numeros aleatorios (0-
 
 function createCube() {
   cube = [];
-  for (let i = 0; i < 0; i++) {
+  for (let i = 0; i < 8; i++) {
     cube.push({ type: 'vertex', x: randomNum(), y: randomNum(), z: randomNum(), char: randomNum()});
   }
 
@@ -23,7 +23,7 @@ function createCube() {
       type: 'edge',
       from: edge[0],
       to: edge[1],
-      chars: Arrays(size).fill().map(() => randomNum())
+      chars: Array(size).fill().map(() => randomNum())
     });
   });
 
@@ -36,9 +36,10 @@ function createCube() {
     cube.push({
       type: 'face',
       vertices: face,
-      chars: Arrays(size * size).fill().map(() => randomNum())
+      chars: Array(size * size).fill().map(() => randomNum())
     });
   });
+};
 
   function renderCube() {
       let output = '';
